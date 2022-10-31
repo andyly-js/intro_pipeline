@@ -77,3 +77,9 @@ resource "aws_sqs_queue_policy" "my_sqs_policy" {
 }
 POLICY
 }
+
+resource "aws_sns_topic_subscription" "sns_updates_sqs_target" {
+    topic_arn =  aws_sns_topic.my_first_sns_topic.arn
+    protocol = "sqs"
+    endpoint =  aws_sqs_queue.my_first_sqs.arn
+}
