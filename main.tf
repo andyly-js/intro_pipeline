@@ -51,4 +51,36 @@ data "aws_iam_policy_document" "my_custom_sns_policy_document" {
 
     sid = "__default_statement_ID"
   }
+
+}
+
+
+resource "aws_sqs_queue" "my_first_sqs" {
+  name                      = var.sqs_name
+}
+
+resource "aws_sqs_queue_policy" "my_sqs_policy" {
+  queue_url = aws_sqs_queue.my_first_sqs.id
+
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Id": "sqspolicy",
+  "Statement": [
+    {
+      "Sid": "First",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "sqs:SendMessage",
+      "Resource": "${aws_sqs_queue.my_first_sqs.arn}"
+    }
+  ]
+}
+POLICY
+}
+
+resource "aws_sns_topic_subscription" "sns_updates_sqs_target" {
+    topic_arn =  aws_sns_topic.my_first_sns_topic.arn
+    protocol = "sqs"
+    endpoint =  aws_sqs_queue.my_first_sqs.arn
 }
