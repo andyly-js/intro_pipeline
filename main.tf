@@ -1,11 +1,51 @@
 provider "aws" {
     access_key = "${var.access_key}"
     secret_key = "${var.secret_key}"
-    region = "eu-west-2"
+    region = "${var.region}"
+}
+
+resource "aws_s3_bucket" "source" {
+    bucket = "source-intro"
+    force_destroy = var.force_destroy
+}
+
+resource "aws_s3_bucket" "datalake" {
+    bucket = "datalake-intro"
+    force_destroy = var.force_destroy
 }
 
 resource "aws_sns_topic" "my_first_sns_topic" {
   name = var.sns_name
+}
+
+resource "aws_s3_bucket_notification" "bucket_notification" {
+
+  bucket = aws_s3_bucket.source.id
+
+  topic {
+    topic_arn     = aws_sns_topic.topic.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".log"
+  }
+}
+
+resource "aws_sns_topic" "topic" {
+  name = "s3-event-notification-topic"
+
+  policy = <<POLICY
+{
+    "Version":"2012-10-17",
+    "Statement":[{
+        "Effect": "Allow",
+        "Principal": { "Service": "s3.amazonaws.com" },
+        "Action": "SNS:Publish",
+        "Resource": "arn:aws:sns:*:*:s3-event-notification-topic",
+        "Condition":{
+            "ArnLike":{"aws:SourceArn":"${aws_s3_bucket.source.arn}"}
+        }
+    }]
+}
+POLICY
 }
 
 resource "aws_sns_topic_policy" "my_sns_topic_policy" {
@@ -47,11 +87,11 @@ data "aws_iam_policy_document" "my_custom_sns_policy_document" {
 
     resources = [
       aws_sns_topic.my_first_sns_topic.arn,
+      
     ]
 
     sid = "__default_statement_ID"
   }
-
 }
 
 
@@ -80,7 +120,7 @@ POLICY
 }
 
 resource "aws_sns_topic_subscription" "sns_updates_sqs_target" {
-    topic_arn =  aws_sns_topic.my_first_sns_topic.arn
+    topic_arn =  aws_sns_topic.topic.arn
     protocol = "sqs"
     endpoint =  aws_sqs_queue.my_first_sqs.arn
 }

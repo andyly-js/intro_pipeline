@@ -11,6 +11,15 @@ variable "sns_name" {
         default = "my_first_sns"
 }
 
+variable "region" {
+        description = "Name of the region that the AWS resource will be hosted in"
+}
+
+variable "force_destroy" {
+  description = "(Optional) A boolean that indicates all objects should be deleted from the bucket so that the bucket can be destroyed without error"
+  type        = string
+  default     = true
+}
 
 variable "sqs_name" {
         description = "Name of the sqs queue to be created. You can assign any unique name for the Queue"
