@@ -38,7 +38,6 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   topic {
     topic_arn     = aws_sns_topic.topic.arn
     events        = ["s3:ObjectCreated:*"]
-    filter_suffix = ".log"
   }
 }
 
@@ -136,4 +135,74 @@ resource "aws_sns_topic_subscription" "sns_updates_sqs_target" {
     topic_arn =  aws_sns_topic.topic.arn
     protocol = "sqs"
     endpoint =  aws_sqs_queue.my_first_sqs.arn
+}
+
+
+# AWS Lamdba setup 
+
+resource "aws_iam_policy" "iam_policy_for_lambda" {
+ 
+ name         = "aws_iam_policy_for_terraform_aws_lambda_role"
+ path         = "/"
+ description  = "AWS IAM Policy for managing aws lambda role"
+ policy = <<EOF
+{
+ "Version": "2012-10-17",
+ "Statement": [
+   {
+     "Action": [
+       "sqs:SendMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:ReceiveMessage",
+        "sqs:TagQueue",
+        "sqs:GetQueueAttributes",
+        "sqs:UntagQueue",
+        "sqs:PurgeQueue"
+     ],
+     "Resource": "${aws_sqs_queue.my_first_sqs.arn}",
+     "Effect": "Allow"
+   }
+ ]
+}
+EOF
+}
+
+resource "aws_iam_role" "lambda_role" {
+name   = "lambda-role"
+assume_role_policy = <<EOF
+{
+ "Version": "2012-10-17",
+ "Statement": [
+   {
+     "Action": "sts:AssumeRole",
+     "Principal": {
+       "Service": "lambda.amazonaws.com"
+     },
+     "Effect": "Allow",
+     "Sid": ""
+   }
+ ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "terraform_function_role" {
+ role        = aws_iam_role.lambda_role.name
+ policy_arn  = aws_iam_policy.iam_policy_for_lambda.arn
+}
+
+resource "aws_lambda_function" "terraform_function" {
+  filename         = "move_file.py.zip"
+  function_name    = "move-from-source-to-datalake"
+  handler          = "index.handler"
+  role             = aws_iam_role.lambda_role.arn
+  runtime          = "python3.9"
+  depends_on       = [aws_iam_role_policy_attachment.terraform_function_role]
+  source_code_hash = "${filebase64sha256("move_file.py.zip")}"
+}
+
+resource "aws_lambda_event_source_mapping" "sqs_trigger_lambda" {
+  event_source_arn = aws_sqs_queue.my_first_sqs.arn
+  function_name    = aws_lambda_function.terraform_function.arn
 }
