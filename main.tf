@@ -14,6 +14,19 @@ resource "aws_s3_bucket" "datalake" {
     force_destroy = var.force_destroy
 }
 
+# Creating a bucket to hold lambda?
+resource "aws_s3_bucket" "lambda_funcs" {
+    bucket = "lambda-funcs-intro"
+    force_destroy = var.force_destroy
+}
+
+resource "aws_s3_object" "lambda_func_file" {
+    bucket = "lambda-funcs-intro"
+    key = "move-from-source-to-datalake"
+    source = "move_file.py.zip"
+}
+
+
 resource "aws_sns_topic" "my_first_sns_topic" {
   name = var.sns_name
 }
