@@ -7,6 +7,7 @@ provider "aws" {
 resource "aws_s3_bucket" "source" {
     bucket = "source-intro"
     force_destroy = var.force_destroy
+    
 }
 
 resource "aws_s3_bucket" "datalake" {
@@ -21,7 +22,7 @@ resource "aws_s3_bucket" "lambda_funcs" {
 }
 
 resource "aws_s3_object" "lambda_func_file" {
-    bucket = "lambda-funcs-intro"
+    bucket = aws_s3_bucket.lambda_funcs.id
     key = "move-from-source-to-datalake"
     source = "move_file.py.zip"
 }
@@ -140,6 +141,13 @@ resource "aws_sns_topic_subscription" "sns_updates_sqs_target" {
 
 # AWS Lamdba setup 
 
+data "archive_file" "zip_the_python_code" {
+type        = "zip"
+source_dir  = "${path.module}/python"
+output_path = "move_file.py.zip"
+}
+
+
 resource "aws_iam_policy" "iam_policy_for_lambda" {
  
  name         = "aws_iam_policy_for_terraform_aws_lambda_role"
@@ -150,19 +158,39 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
  "Version": "2012-10-17",
  "Statement": [
    {
-     "Action": [
-       "sqs:SendMessage",
-        "sqs:DeleteMessage",
-        "sqs:ChangeMessageVisibility",
-        "sqs:ReceiveMessage",
-        "sqs:TagQueue",
+     "Action": 
+      [
         "sqs:GetQueueAttributes",
-        "sqs:UntagQueue",
-        "sqs:PurgeQueue"
-     ],
-     "Resource": "${aws_sqs_queue.my_first_sqs.arn}",
-     "Effect": "Allow"
-   }
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage"
+        ]
+        ,
+      "Resource": "${aws_sqs_queue.my_first_sqs.arn}",
+      "Effect": "Allow"
+   }, 
+   {
+    "Action":["s3:ListBucket",
+              "s3:GetObject",
+              "s3:GetObjectTagging",
+              "s3:PutObject",
+              "s3:PutObjectTagging",
+              "s3:PutObjectAcl"],
+    "Effect": "Allow",
+    "Resource": [
+      "${aws_s3_bucket.datalake.arn}",
+      "${aws_s3_bucket.source.arn}",
+      "${aws_s3_bucket.datalake.arn}/*",
+       "${aws_s3_bucket.source.arn}/*"
+      ]
+   },
+  {"Effect": "Allow",
+  "Action": [
+    "logs:CreateLogGroup",
+    "logs:CreateLogStream",
+    "logs:PutLogEvents"
+  ],
+  "Resource": ["arn:aws:logs:*:*:*"]
+  } 
  ]
 }
 EOF
@@ -195,7 +223,7 @@ resource "aws_iam_role_policy_attachment" "terraform_function_role" {
 resource "aws_lambda_function" "terraform_function" {
   filename         = "move_file.py.zip"
   function_name    = "move-from-source-to-datalake"
-  handler          = "index.handler"
+  handler          = "move_file.handler"
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.9"
   depends_on       = [aws_iam_role_policy_attachment.terraform_function_role]
