@@ -15,6 +15,7 @@ variable "sns_name" {
 
 variable "region" {
   description = "Name of the region that the AWS resource will be hosted in"
+  default = ""
 }
 
 variable "force_destroy" {
