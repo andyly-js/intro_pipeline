@@ -1,11 +1,11 @@
-# variable "access_key" {
-#   description = "Access key of AWS IAM user"
-#   default     = ""
-# }
-# variable "secret_key" {
-#   description = "Secret key of AWS IAM user"
-#   default     = ""
-# }
+variable "access_key" {
+  description = "Access key of AWS IAM user"
+  default     = ""
+}
+variable "secret_key" {
+  description = "Secret key of AWS IAM user"
+  default     = ""
+}
 
 
 variable "sns_name" {
@@ -13,10 +13,10 @@ variable "sns_name" {
   default     = "my_first_sns"
 }
 
-# variable "region" {
-#   description = "Name of the region that the AWS resource will be hosted in"
-#   default = ""
-# }
+variable "region" {
+  description = "Name of the region that the AWS resource will be hosted in"
+  default = ""
+}
 
 variable "force_destroy" {
   description = "(Optional) A boolean that indicates all objects should be deleted from the bucket so that the bucket can be destroyed without error"
