@@ -4,6 +4,19 @@ provider "aws" {
     region = "${var.region}"
 }
 
+# The configuration for the `remote` backend.
+terraform {
+  backend "remote" {
+    # The name of your Terraform Cloud organization.
+    organization = "broc"
+
+    # The name of the Terraform Cloud workspace to store Terraform state files in.
+    workspaces {
+      name = "intro-pipeline"
+    }
+  }
+}
+
 resource "aws_s3_bucket" "source" {
     bucket = "source-intro"
     force_destroy = var.force_destroy
